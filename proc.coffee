@@ -53,7 +53,7 @@ updateProcErr = false
 updateProc = (pid, cb) ->
   #console.log "updateProc", pid, cb?, ++nc
   fs.readFile "/proc/#{pid}/stat", 'utf8', (err, contents) ->
-    updateProcErr = err if err
+    return cb updateProcErr = err if err
     procCache[pid] || = {}
     procStat = parseProcStat contents
     _.extend procCache[pid], procStat
