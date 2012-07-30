@@ -1,0 +1,16 @@
+{
+  "name": "proc",
+  "version": "0.0.0",
+  "description": "procfs interface for node",
+  "main": "proc.js",
+  "dependencies": {
+    "underscore": "~1.3.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "author": "Sam Gentle <sam@pinion.gg>",
+  "license": "BSD"
+}
