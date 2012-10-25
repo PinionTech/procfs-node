@@ -148,10 +148,24 @@ vmstat = (cb=->) ->
   stream.on 'end', ->
     cb null, ret
 
+meminfo = (cb=->) ->
+  ret = {}
+  stream = lazy fs.createReadStream '/proc/meminfo'
+  stream.lines.forEach (line) ->
+    line = line.toString('utf8').trim().split(':')
+    [k, v] = line
+    ret[k] = maybeNum v
+
+  stream.on 'error', (err) ->
+    cb err
+
+  stream.on 'end', ->
+    cb null, ret
 
 
 proc.stat = stat
 proc.diskstats = diskstats
 proc.vmstat = vmstat
+proc.meminfo = meminfo
 
 module.exports = proc
