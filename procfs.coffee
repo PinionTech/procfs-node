@@ -9,6 +9,7 @@ FORMATS =
   diskstats: qw "dev_major dev_minor name reads reads_merged read_sectors read_time writes writes_merged write_sectors write_time ios_in_progress ios_time ios_time_weighted"
   stat:
     cpu: qw "name user nice system idle iowait irq softirq steal guest guest_nice"
+  partitions: qw "major minor blocks name"
 
 procCache = null
 updating = false
@@ -162,10 +163,21 @@ meminfo = (cb=->) ->
   stream.on 'end', ->
     cb null, ret
 
+partitions = (cb=->) ->
+  ret = {}
+  stream = lazy fs.createReadStream '/proc/partitions'
+  stream.lines.forEach (line) ->
+    line = line.toString('utf8').trim().split(/\s+/)
+    name = line[3]
+    return if !name or line[0] is 'major'
+    ret[name] = format FORMATS.partitions, line
 
-proc.stat = stat
-proc.diskstats = diskstats
-proc.vmstat = vmstat
-proc.meminfo = meminfo
+  stream.on 'error', (err) ->
+    cb err
+
+  stream.on 'end', ->
+    cb null, ret
+
+proc[k] = v for k, v of {stat, diskstats, vmstat, meminfo, partitions}
 
 module.exports = proc

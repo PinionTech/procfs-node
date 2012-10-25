@@ -1,4 +1,4 @@
-proc = require './proc'
+proc = require './procfs'
 
 INTERVAL = 3
 
