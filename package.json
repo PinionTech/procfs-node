@@ -1,6 +1,6 @@
 {
   "name": "procfs",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "procfs interface for node",
   "main": "procfs.js",
   "dependencies": {
