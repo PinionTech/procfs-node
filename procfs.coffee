@@ -10,6 +10,7 @@ FORMATS =
   stat:
     cpu: qw "name user nice system idle iowait irq softirq steal guest guest_nice"
   partitions: qw "major minor blocks name"
+  mounts: qw "device mountpoint type options freq pass"
 
 procCache = null
 updating = false
@@ -101,47 +102,10 @@ proc = (pid, cb) ->
     else
       cb null, if pid then pcache[pid] else pcache
 
-stat = (cb=->) ->
+procParser = (file, fn) -> (cb=->) ->
   ret = {}
-  ret.cpus = 0
-  stream = lazy fs.createReadStream '/proc/stat'
-  stream.lines.forEach (line) ->
-    line = line.toString('utf8').split(/\s+/)
-    name = line[0]
-    if name.match /^cpu/
-      ret.cpus++ unless name is 'cpu'
-      ret[name] = format FORMATS.stat.cpu, line
-    else if line.length is 2
-      ret[name] = maybeNum line[1]
-    
-  stream.on 'error', (err) ->
-    cb err
-
-  stream.on 'end', ->
-    cb null, ret
-
-
-diskstats = (cb=->) ->
-  ret = {}
-  stream = lazy fs.createReadStream '/proc/diskstats'
-  stream.lines.forEach (line) ->
-    line = line.toString('utf8').trim().split(/\s+/)
-    name = line[2]
-    ret[name] = format FORMATS.diskstats, line
-    
-  stream.on 'error', (err) ->
-    cb err
-
-  stream.on 'end', ->
-    cb null, ret
-
-vmstat = (cb=->) ->
-  ret = {}
-  stream = lazy fs.createReadStream '/proc/vmstat'
-  stream.lines.forEach (line) ->
-    line = line.toString('utf8').trim().split(/\s+/)
-    [k, v] = line
-    ret[k] = maybeNum v
+  stream = lazy fs.createReadStream file
+  stream.lines.forEach (line) -> fn ret, line.toString('utf8').trim()
 
   stream.on 'error', (err) ->
     cb err
@@ -149,35 +113,43 @@ vmstat = (cb=->) ->
   stream.on 'end', ->
     cb null, ret
 
-meminfo = (cb=->) ->
-  ret = {}
-  stream = lazy fs.createReadStream '/proc/meminfo'
-  stream.lines.forEach (line) ->
-    line = line.toString('utf8').trim().split(':')
-    [k, v] = line
-    ret[k] = maybeNum v
+stat = procParser '/proc/stat', (ret, line) ->
+  line = line.split /\s+/
+  name = line[0]
+  if name.match /^cpu/
+    ret.cpus ?= 0
+    ret.cpus++ unless name is 'cpu'
+    ret[name] = format FORMATS.stat.cpu, line
+  else if line.length is 2
+    ret[name] = maybeNum line[1]
 
-  stream.on 'error', (err) ->
-    cb err
+diskstats = procParser '/proc/diskstats', (ret, line) ->
+  line = line.split /\s+/
+  name = line[2]
+  ret[name] = format FORMATS.diskstats, line
 
-  stream.on 'end', ->
-    cb null, ret
+vmstat = procParser '/proc/vmstat', (ret, line) ->
+  line = line.split /\s+/
+  [k, v] = line
+  ret[k] = maybeNum v
 
-partitions = (cb=->) ->
-  ret = {}
-  stream = lazy fs.createReadStream '/proc/partitions'
-  stream.lines.forEach (line) ->
-    line = line.toString('utf8').trim().split(/\s+/)
-    name = line[3]
-    return if !name or line[0] is 'major'
-    ret[name] = format FORMATS.partitions, line
+meminfo = procParser '/proc/meminfo', (ret, line) ->
+  line = line.split ':'
+  [k, v] = line
+  ret[k] = maybeNum v
 
-  stream.on 'error', (err) ->
-    cb err
+partitions = procParser '/proc/partitions', (ret, line) ->
+  line = line.split /\s+/
+  name = line[3]
+  return if !name or line[0] is 'major'
+  ret[name] = format FORMATS.partitions, line
 
-  stream.on 'end', ->
-    cb null, ret
+mounts = procParser '/proc/mounts', (ret, line) ->
+  line = line.split /\s+/
+  name = line[1]
+  ret[name] = format FORMATS.mounts, line
 
-proc[k] = v for k, v of {stat, diskstats, vmstat, meminfo, partitions}
+
+proc[k] = v for k, v of {stat, diskstats, vmstat, meminfo, partitions, mounts}
 
 module.exports = proc
