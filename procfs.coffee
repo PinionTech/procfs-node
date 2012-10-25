@@ -11,6 +11,8 @@ FORMATS =
     cpu: qw "name user nice system idle iowait irq softirq steal guest guest_nice"
   partitions: qw "major minor blocks name"
   mounts: qw "device mountpoint type options freq pass"
+  net:
+    dev: qw "bytes packets errs drop fifo frame compressed multicast"
 
 procCache = null
 updating = false
@@ -149,7 +151,14 @@ mounts = procParser '/proc/mounts', (ret, line) ->
   name = line[1]
   ret[name] = format FORMATS.mounts, line
 
+netdev = procParser '/proc/net/dev', (ret, line) ->
+  [dev, line] = line.split ':'
+  return unless line
+  line = line.trim().split /\s+/
+  ret[dev] =
+    receive: format FORMATS.net.dev, line.slice(0,8)
+    transmit: format FORMATS.net.dev, line.slice(8)
 
-proc[k] = v for k, v of {stat, diskstats, vmstat, meminfo, partitions, mounts}
+proc[k] = v for k, v of {stat, diskstats, vmstat, meminfo, partitions, mounts, netdev}
 
 module.exports = proc
