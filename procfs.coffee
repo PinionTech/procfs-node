@@ -93,7 +93,11 @@ format = (formatter, data) ->
     if name
       ret[name] = maybeNum val
     else
-      console.warn "WARNING: don't know what to do with field #{i}: #{val}"   
+      # This warning, although useful, can lead to a lot of extra debug info
+      # It seems the kernel devs sometimes add fields to procfs without documenting
+      # them so we should gracefully ignore that
+
+      #console.warn "WARNING: don't know what to do with field #{i}: #{val}"
   ret
 
 proc = (pid, cb) ->
